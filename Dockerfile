@@ -47,7 +47,7 @@ RUN \
 	RELEASE=$(curl -u "${SECRETUSER}:${SECRETPASS}" -sX GET "https://api.github.com/repos/Flax-Network/flax-blockchain/releases/latest" \
 	| jq -r ".tag_name"); \
 	fi \
-	&& git clone -b "${RELEASE}" --recurse-submodules https://github.com/Flax-Network/flax-blockchain.git \
+	&& git clone -b "${RELEASE}" https://github.com/Flax-Network/flax-blockchain.git \
 		/flax-blockchain \		
 	&& sh install.sh \
 # cleanup
