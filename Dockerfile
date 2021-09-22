@@ -1,5 +1,5 @@
 ARG UBUNTU_VER="focal"
-FROM ubuntu:${UBUNTU_VER} as packages
+FROM ubuntu:${UBUNTU_VER}
 
 # build arguments
 ARG DEBIAN_FRONTEND=noninteractive
@@ -7,17 +7,18 @@ ARG RELEASE
 
 # environment variables
 ENV \
-	keys="generate" \
-	harvester="false" \
-	farmer="false" \
-	plots_dir="/plots" \
+	CONFIG_ROOT=/root/.flax/mainnet \
 	farmer_address="null" \
+	farmer="false" \
 	farmer_port="null" \
-	testnet="false" \
 	full_node_port="null" \
+	harvester="false" \
+	keys="generate" \
+	plots_dir="/plots" \
+	testnet="false" \
 	TZ="UTC"
 
-# set workdir 
+# set workdir for build stage
 WORKDIR /flax-blockchain
 
 # install dependencies
@@ -25,14 +26,28 @@ RUN \
 	apt-get update \
 	&& apt-get install -y \
 	--no-install-recommends \
+		acl \
 		bc \
 		ca-certificates \
 		curl \
 		git \
 		jq \
 		lsb-release \
+		openssl \
+		python3 \
 		sudo \
+		tar \
+		tzdata \
+		unzip \
+	\
+# set timezone
+	\
+	&& ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime \
+	&& echo "$TZ" > /etc/timezone \
+	&& dpkg-reconfigure -f noninteractive tzdata \
+	\
 # cleanup
+	\
 	&& rm -rf \
 		/tmp/* \
 		/var/lib/apt/lists/* \
@@ -49,13 +64,16 @@ RUN \
 	fi \
 	&& git clone -b "${RELEASE}" https://github.com/Flax-Network/flax-blockchain.git \
 		/flax-blockchain \		
-	&& sh install.sh \
-# cleanup
-	&& rm -rf \
-		/tmp/* \
-		/var/lib/apt/lists/* \
-		/var/tmp/*
+	&& git submodule update --init mozilla-ca \
+	&& sh install.sh
 
-# add local files
-COPY ./entrypoint.sh entrypoint.sh
-ENTRYPOINT ["bash", "./entrypoint.sh"]
+# set path
+ENV PATH=/flax-blockchain/venv/bin:$PATH
+
+# copy local files
+COPY docker-*.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-*.sh
+
+# entrypoint
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["docker-start.sh"]
