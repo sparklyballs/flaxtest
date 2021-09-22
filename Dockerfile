@@ -7,7 +7,6 @@ ARG RELEASE
 
 # environment variables
 ENV \
-	CONFIG_ROOT=/root/.flax/mainnet \
 	farmer_address="null" \
 	farmer="false" \
 	farmer_port="null" \
@@ -67,8 +66,10 @@ RUN \
 	&& git submodule update --init mozilla-ca \
 	&& sh install.sh
 
-# set path
-ENV PATH=/flax-blockchain/venv/bin:$PATH
+# set additional runtime environment variables
+ENV \
+	PATH=/flax-blockchain/venv/bin:$PATH \
+	CONFIG_ROOT=/root/.flax/mainnet
 
 # copy local files
 COPY docker-*.sh /usr/local/bin/
