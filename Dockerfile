@@ -17,9 +17,6 @@ ENV \
 	testnet="false" \
 	TZ="UTC"
 
-# set workdir for build stage
-WORKDIR /flax-blockchain
-
 # install dependencies
 RUN \
 	apt-get update \
@@ -52,6 +49,9 @@ RUN \
 		/var/lib/apt/lists/* \
 		/var/tmp/*
 
+# set workdir for build stage
+WORKDIR /flax-blockchain
+
 # set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -64,7 +64,15 @@ RUN \
 	&& git clone -b "${RELEASE}" https://github.com/Flax-Network/flax-blockchain.git \
 		/flax-blockchain \		
 	&& git submodule update --init mozilla-ca \
-	&& sh install.sh
+	&& sh install.sh \
+	\
+# cleanup
+	\
+	&& rm -rf \
+		/root/.cache \
+		/tmp/* \
+		/var/lib/apt/lists/* \
+		/var/tmp/*
 
 # set additional runtime environment variables
 ENV \
