@@ -4,6 +4,9 @@ FROM python:3.9 AS flax_build
 ARG DEBIAN_FRONTEND=noninteractive 
 ARG RELEASE
 
+# set shell
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # install build dependencies
 RUN \
 	apt-get update \
@@ -24,7 +27,7 @@ RUN \
 	RELEASE=$(curl -u "${SECRETUSER}:${SECRETPASS}" -sX GET "https://api.github.com/repos/Flax-Network/flax-blockchain/releases/latest" \
 	| jq -r ".tag_name"); \
 	fi \
-	&& git clone --branch ${RELEASE} --recurse-submodules=mozilla-ca https://github.com/Flax-Network/flax-blockchain.git . \
+	&& git clone --branch "${RELEASE}" --recurse-submodules=mozilla-ca https://github.com/Flax-Network/flax-blockchain.git . \
 	&& /bin/sh ./install.sh
 
 FROM python:3.9-slim
