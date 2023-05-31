@@ -5,6 +5,7 @@ pipeline {
 
 options {
 	skipDefaultCheckout(true)
+	buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5'))
 	}
 
 environment {
@@ -12,8 +13,9 @@ environment {
 	CREDS_GITHUB=credentials('bd8b00ff-decf-4a75-9e56-1ea2c7d0d708')
 	CONTAINER_NAME = 'flaxtest'
 	CONTAINER_REPOSITORY = 'sparklyballs/flaxtest'
+	GITHUB_RELEASE_URL_SUFFIX = 'Flax-Network/flax-blockchain/releases/latest'
+	GITHUB_REPOSITORY = 'sparklyballs/flaxtest'
 	HADOLINT_OPTIONS = '--ignore DL3008 --ignore DL3013 --ignore DL3018 --ignore DL3028 --format json'
-	RELEASE_URL = 'https://api.github.com/repos/Flax-Network/flax-blockchain/releases/latest'
 	}
 
 stages {
@@ -21,7 +23,7 @@ stages {
 stage('Query Release Version') {
 steps {
 script{
-	env.RELEASE_VER = sh(script: 'curl -sX GET "${RELEASE_URL}" | jq -r ".tag_name"', returnStdout: true).trim() 
+	env.RELEASE_VER = sh(script: 'curl -sX GET "https://api.github.com/repos/${GITHUB_RELEASE_URL_SUFFIX}" | jq -r ".tag_name"', returnStdout: true).trim() 
 	}
 	}
 	}
@@ -42,8 +44,10 @@ steps {
 	ghcr.io/hadolint/hadolint \
 	hadolint $HADOLINT_OPTIONS \
 	/Dockerfile | tee hadolint_lint.txt')
+	recordIssues enabledForFailure: true, tool: hadoLint(pattern: 'hadolint_lint.txt')	
 	}
 	}
+
 
 stage('Build Docker Image') {
 steps {
@@ -65,11 +69,26 @@ steps {
 	}
 	}
 
+stage('Readme Sync') {
+steps {
+	sh('docker pull ghcr.io/linuxserver/readme-sync')
+	sh('docker run --rm=true \
+	-e DOCKERHUB_USERNAME=$CREDS_DOCKERHUB_USR \
+	-e DOCKERHUB_PASSWORD=$CREDS_DOCKERHUB_PSW \
+	-e GIT_REPOSITORY=$GITHUB_REPOSITORY \
+	-e DOCKER_REPOSITORY=$CONTAINER_REPOSITORY \
+	-e GIT_BRANCH=master \
+	ghcr.io/linuxserver/readme-sync bash -c "node sync"')
+	}
+	}
 }
 
 post {
-always {
-	recordIssues enabledForFailure: true, tool: hadoLint(pattern: 'hadolint_lint.txt')	
+success {
+sshagent (credentials: ['bd8b00ff-decf-4a75-9e56-1ea2c7d0d708']) {
+    sh('git tag -f $RELEASE_VER')
+    sh('git push -f git@github.com:$GITHUB_REPOSITORY.git $RELEASE_VER')
+	}
 	}
 	}
 }
